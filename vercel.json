@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm install && pnpm --filter @workspace/cafe-ekaant run build",
+  "outputDirectory": "artifacts/cafe-ekaant/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null
+}
