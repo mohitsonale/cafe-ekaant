@@ -1,31 +1,98 @@
-'use client';
-
 import * as React from 'react';
-import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
 
-const TooltipProvider = TooltipPrimitive.Provider;
+// Lightweight tooltip — no external dependency, no 'use client', no animation CSS.
+// API-compatible with the previous @radix-ui/react-tooltip implementation.
 
-const Tooltip = TooltipPrimitive.Root;
+interface TooltipContextValue {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}
 
-const TooltipTrigger = TooltipPrimitive.Trigger;
+const TooltipContext = React.createContext<TooltipContextValue>({
+  open: false,
+  setOpen: () => {},
+});
 
-const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Portal>
-    <TooltipPrimitive.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={cn(
-        'z-50 overflow-hidden rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]',
-        className,
-      )}
-      {...props}
-    />
-  </TooltipPrimitive.Portal>
-));
-TooltipContent.displayName = TooltipPrimitive.Content.displayName;
+// ─── Provider ────────────────────────────────────────────────────────────────
+
+interface TooltipProviderProps {
+  children: React.ReactNode;
+  delayDuration?: number;
+}
+
+const TooltipProvider = ({ children }: TooltipProviderProps) => (
+  <>{children}</>
+);
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
+interface TooltipProps {
+  children: React.ReactNode;
+}
+
+const Tooltip = ({ children }: TooltipProps) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <TooltipContext.Provider value={{ open, setOpen }}>
+      <div className="relative inline-block">{children}</div>
+    </TooltipContext.Provider>
+  );
+};
+
+// ─── Trigger ──────────────────────────────────────────────────────────────────
+
+interface TooltipTriggerProps {
+  children: React.ReactNode;
+  asChild?: boolean;
+}
+
+const TooltipTrigger = ({ children, asChild }: TooltipTriggerProps) => {
+  const { setOpen } = React.useContext(TooltipContext);
+  const handlers = {
+    onMouseEnter: () => setOpen(true),
+    onMouseLeave: () => setOpen(false),
+    onFocus: () => setOpen(true),
+    onBlur: () => setOpen(false),
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return React.cloneElement(children as React.ReactElement<any>, handlers);
+  }
+  return <span {...handlers}>{children}</span>;
+};
+
+// ─── Content ──────────────────────────────────────────────────────────────────
+
+interface TooltipContentProps {
+  children?: React.ReactNode;
+  className?: string;
+  sideOffset?: number;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+}
+
+const TooltipContent = React.forwardRef<HTMLDivElement, TooltipContentProps>(
+  ({ children, className, sideOffset = 4 }, ref) => {
+    const { open } = React.useContext(TooltipContext);
+    if (!open) return null;
+    return (
+      <div
+        ref={ref}
+        role="tooltip"
+        style={{ marginBottom: sideOffset }}
+        className={cn(
+          'absolute bottom-full left-1/2 -translate-x-1/2 z-50',
+          'rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground',
+          'whitespace-nowrap shadow-md',
+          className,
+        )}
+      >
+        {children}
+      </div>
+    );
+  },
+);
+TooltipContent.displayName = 'TooltipContent';
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
