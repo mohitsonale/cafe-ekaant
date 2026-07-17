@@ -1,9 +1,14 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import pinoHttp from "pino-http";
+import pinoHttpModule from "pino-http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+// pino-http uses `export =` (CJS) which TypeScript cannot call directly
+// under moduleResolution:bundler — cast once here, runtime behaviour unchanged.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pinoHttp = pinoHttpModule as any;
 
 const app: Express = express();
 
